@@ -2,6 +2,7 @@ package hk.ust.csit5970;
 
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.HashMap;
 
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
@@ -18,6 +19,7 @@ import org.apache.hadoop.io.FloatWritable;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.mapred.TestMiniMRClientCluster.MyReducer;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.hadoop.mapreduce.Partitioner;
@@ -53,6 +55,18 @@ public class BigramFrequencyPairs extends Configured implements Tool {
 			/*
 			 * TODO: Your implementation goes here.
 			 */
+			for (int i = 0; i < words.length - 1; i++) {
+                String currentWord = words[i];
+                String nextWord = words[i + 1];
+
+                // Emit total count for currentWord
+                BIGRAM.set(currentWord, "");
+                context.write(BIGRAM, ONE);
+
+                // Emit bigram
+                BIGRAM.set(currentWord, nextWord);
+                context.write(BIGRAM, ONE);
+            }
 		}
 	}
 
@@ -64,13 +78,26 @@ public class BigramFrequencyPairs extends Configured implements Tool {
 
 		// Reuse objects.
 		private final static FloatWritable VALUE = new FloatWritable();
-
+		private float totalCount = 0;
 		@Override
 		public void reduce(PairOfStrings key, Iterable<IntWritable> values,
 				Context context) throws IOException, InterruptedException {
 			/*
 			 * TODO: Your implementation goes here.
 			 */
+			// Calculate relative frequency: either total count (if right element empty) or normalized value
+			int sum = 0;
+            for (IntWritable value : values) {
+                sum += value.get();
+            }
+            
+            if (key.getRightElement().isEmpty()) {
+                totalCount = sum;
+                context.write(key, new FloatWritable(totalCount));
+            } else {
+                VALUE.set(sum / totalCount);
+                context.write(key, VALUE);
+            }
 		}
 	}
 	
@@ -84,6 +111,12 @@ public class BigramFrequencyPairs extends Configured implements Tool {
 			/*
 			 * TODO: Your implementation goes here.
 			 */
+			int sum = 0;
+            for (IntWritable value : values) {
+                sum += value.get();
+            }
+            SUM.set(sum);
+            context.write(key, SUM);
 		}
 	}
 
