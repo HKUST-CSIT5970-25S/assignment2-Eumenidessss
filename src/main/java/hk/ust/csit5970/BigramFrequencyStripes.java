@@ -19,6 +19,7 @@ import org.apache.hadoop.io.FloatWritable;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.mapred.TestMiniMRClientCluster.MyReducer;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.hadoop.mapreduce.Reducer;
@@ -54,6 +55,17 @@ public class BigramFrequencyStripes extends Configured implements Tool {
 			/*
 			 * TODO: Your implementation goes here.
 			 */
+			for (int i = 0; i < words.length - 1; i++) {
+				KEY.set(words[i]);
+				String nextWord = words[i + 1];
+				if (!STRIPE.containsKey(nextWord)) {
+					STRIPE.put(nextWord, 1);
+				} else {
+					STRIPE.increment(nextWord);
+				}
+				context.write(KEY, STRIPE);
+				STRIPE.clear(); // Clear the stripe for the next word
+			}
 		}
 	}
 
@@ -75,6 +87,29 @@ public class BigramFrequencyStripes extends Configured implements Tool {
 			/*
 			 * TODO: Your implementation goes here.
 			 */
+			int totalCount = 0;
+			SUM_STRIPES.clear(); // Clear the sum stripes before processing
+
+			for (HashMapStringIntWritable stripe : stripes) {
+				for (String nextWord : stripe.keySet()) {
+					int count = stripe.get(nextWord);
+					totalCount += count;
+					SUM_STRIPES.increment(nextWord, count);
+				}
+			}
+
+			// Emit total count for the word
+			BIGRAM.set(key.toString(), "");
+			FREQ.set(totalCount);
+			context.write(BIGRAM, FREQ);
+
+			// Emit relative frequency for each subsequent word
+			for (String nextWord : SUM_STRIPES.keySet()) {
+				float freq = (float) SUM_STRIPES.get(nextWord) / totalCount;
+				BIGRAM.set(key.toString(), nextWord);
+				FREQ.set(freq);
+				context.write(BIGRAM, FREQ);
+			}
 		}
 	}
 
@@ -94,6 +129,14 @@ public class BigramFrequencyStripes extends Configured implements Tool {
 			/*
 			 * TODO: Your implementation goes here.
 			 */
+			SUM_STRIPES.clear(); // Clear the sum stripes before processing
+			for (HashMapStringIntWritable stripe : stripes) {
+				for (String nextWord : stripe.keySet()) {
+					int count = stripe.get(nextWord);
+					SUM_STRIPES.increment(nextWord, count);
+				}
+			}
+			context.write(key, SUM_STRIPES);
 		}
 	}
 
