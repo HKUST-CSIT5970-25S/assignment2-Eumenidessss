@@ -57,6 +57,7 @@ public class CORPairs extends Configured implements Tool {
 			/*
 			 * TODO: Your implementation goes here.
 			 */
+			// Count word frequencies
 			while (doc_tokenizer.hasMoreTokens()) {
 				String word = doc_tokenizer.nextToken();
 				Integer count = word_set.get(word);
@@ -65,7 +66,7 @@ public class CORPairs extends Configured implements Tool {
 				}
 				word_set.put(word, count + 1);
 			}
-			
+			// Emit (word, count) pairs
 			for (Map.Entry<String, Integer> entry : word_set.entrySet()) {
 				context.write(new Text(entry.getKey()), new IntWritable(entry.getValue()));
 			}
@@ -82,6 +83,7 @@ public class CORPairs extends Configured implements Tool {
 			/*
 			 * TODO: Your implementation goes here.
 			 */
+			// Sum all values for the current key
 			int sum = 0;
             for (IntWritable val : values) {
                 sum += val.get();
@@ -106,6 +108,7 @@ public class CORPairs extends Configured implements Tool {
 			/*
 			 * TODO: Your implementation goes here.
 			 */
+			// Generate all ordered word pairs from sorted document terms
 			while (doc_tokenizer.hasMoreTokens()) {
 				words.add(doc_tokenizer.nextToken());
 			}
@@ -113,7 +116,7 @@ public class CORPairs extends Configured implements Tool {
 			List<String> wordList = new ArrayList<String>();
 			wordList.addAll(words);
 			Collections.sort(wordList);
-			
+			// Emit each ordered word pair with count 1
 			for (int i = 0; i < wordList.size(); i++) {
 				for (int j = i + 1; j < wordList.size(); j++) {
 					PairOfStrings pair = new PairOfStrings(wordList.get(i), wordList.get(j));
@@ -132,6 +135,7 @@ public class CORPairs extends Configured implements Tool {
 			/*
 			 * TODO: Your implementation goes here.
 			 */
+			// Aggregate counts for each word pair
 			int sum = 0;
             for (IntWritable val : values) {
                 sum += val.get();
@@ -189,6 +193,7 @@ public class CORPairs extends Configured implements Tool {
 			/*
 			 * TODO: Your implementation goes here.
 			 */
+			// Calculate word pair correlation score
 			int freqAB = 0;
             for (IntWritable val : values) {
                 freqAB += val.get();
@@ -200,6 +205,7 @@ public class CORPairs extends Configured implements Tool {
             int freqA = word_total_map.containsKey(leftWord) ? word_total_map.get(leftWord) : 0;
             int freqB = word_total_map.containsKey(rightWord) ? word_total_map.get(rightWord) : 0;
 
+			// Compute and emit correlation if both words exist
             if (freqA > 0 && freqB > 0) {
                 double correlation = (double) freqAB / (freqA * freqB);
                 context.write(key, new DoubleWritable(correlation));

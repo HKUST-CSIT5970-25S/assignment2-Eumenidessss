@@ -85,6 +85,7 @@ public class BigramFrequencyPairs extends Configured implements Tool {
 			/*
 			 * TODO: Your implementation goes here.
 			 */
+			// Calculate relative frequency: either total count (if right element empty) or normalized value
 			int sum = 0;
             for (IntWritable value : values) {
                 sum += value.get();
