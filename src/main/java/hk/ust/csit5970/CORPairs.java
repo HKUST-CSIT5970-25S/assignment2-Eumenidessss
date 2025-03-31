@@ -43,6 +43,10 @@ public class CORPairs extends Configured implements Tool {
 	 */
 	private static class CORMapper1 extends
 			Mapper<LongWritable, Text, Text, IntWritable> {
+		//
+		private final static IntWritable ONE = new IntWritable(1);
+        private final HashSet<String> uniqueWordsInLine = new HashSet<String>(); 
+        // private final List<String> sortedUniqueWords = new ArrayList<String>();   
 		@Override
 		public void map(LongWritable key, Text value, Context context)
 				throws IOException, InterruptedException {
@@ -53,6 +57,18 @@ public class CORPairs extends Configured implements Tool {
 			/*
 			 * TODO: Your implementation goes here.
 			 */
+			while (doc_tokenizer.hasMoreTokens()) {
+				String word = doc_tokenizer.nextToken();
+				Integer count = word_set.get(word);
+				if (count == null) {
+					count = 0;
+				}
+				word_set.put(word, count + 1);
+			}
+			
+			for (Map.Entry<String, Integer> entry : word_set.entrySet()) {
+				context.write(new Text(entry.getKey()), new IntWritable(entry.getValue()));
+			}
 		}
 	}
 
@@ -66,6 +82,11 @@ public class CORPairs extends Configured implements Tool {
 			/*
 			 * TODO: Your implementation goes here.
 			 */
+			int sum = 0;
+            for (IntWritable val : values) {
+                sum += val.get();
+            }
+            context.write(key, new IntWritable(sum));
 		}
 	}
 
@@ -74,13 +95,31 @@ public class CORPairs extends Configured implements Tool {
 	 * TODO: Write your second-pass Mapper here.
 	 */
 	public static class CORPairsMapper2 extends Mapper<LongWritable, Text, PairOfStrings, IntWritable> {
+		private final static IntWritable ONE = new IntWritable(1);
+		private final HashSet<String> uniqueWordsInLine = new HashSet<String>();
+
 		@Override
 		protected void map(LongWritable key, Text value, Context context) throws IOException, InterruptedException {
 			// Please use this tokenizer! DO NOT implement a tokenizer by yourself!
 			StringTokenizer doc_tokenizer = new StringTokenizer(value.toString().replaceAll("[^a-z A-Z]", " "));
+			Set<String> words = new HashSet<String>();
 			/*
 			 * TODO: Your implementation goes here.
 			 */
+			while (doc_tokenizer.hasMoreTokens()) {
+				words.add(doc_tokenizer.nextToken());
+			}
+
+			List<String> wordList = new ArrayList<String>();
+			wordList.addAll(words);
+			Collections.sort(wordList);
+			
+			for (int i = 0; i < wordList.size(); i++) {
+				for (int j = i + 1; j < wordList.size(); j++) {
+					PairOfStrings pair = new PairOfStrings(wordList.get(i), wordList.get(j));
+					context.write(pair, new IntWritable(1));
+				}
+			}
 		}
 	}
 
@@ -93,6 +132,11 @@ public class CORPairs extends Configured implements Tool {
 			/*
 			 * TODO: Your implementation goes here.
 			 */
+			int sum = 0;
+            for (IntWritable val : values) {
+                sum += val.get();
+            }
+            context.write(key, new IntWritable(sum));
 		}
 	}
 
@@ -145,6 +189,21 @@ public class CORPairs extends Configured implements Tool {
 			/*
 			 * TODO: Your implementation goes here.
 			 */
+			int freqAB = 0;
+            for (IntWritable val : values) {
+                freqAB += val.get();
+            }
+
+            String leftWord = key.getLeftElement();
+            String rightWord = key.getRightElement();
+
+            int freqA = word_total_map.containsKey(leftWord) ? word_total_map.get(leftWord) : 0;
+            int freqB = word_total_map.containsKey(rightWord) ? word_total_map.get(rightWord) : 0;
+
+            if (freqA > 0 && freqB > 0) {
+                double correlation = (double) freqAB / (freqA * freqB);
+                context.write(key, new DoubleWritable(correlation));
+            }
 		}
 	}
 
